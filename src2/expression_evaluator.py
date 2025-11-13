@@ -155,6 +155,12 @@ class ExpressionEvaluator:
             else:
                 local_vars[key] = value
 
+        # 文字列メソッドのヘルパー関数を追加
+        local_vars['str_lower'] = lambda s: str(s).lower() if s is not None else ''
+        local_vars['str_upper'] = lambda s: str(s).upper() if s is not None else ''
+        local_vars['str_replace'] = lambda s, old, new: str(s).replace(old, new) if s is not None else ''
+        local_vars['str_split'] = lambda s, sep: str(s).split(sep) if s is not None else []
+
         return local_vars
 
     def _replace_functions(self, expression: str, context: Dict[str, Any]) -> str:

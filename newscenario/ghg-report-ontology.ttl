@@ -1,0 +1,110 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix ghg: <http://example.org/ghg-report#> .
+
+# オントロジー定義
+ghg:GHGReportOntology a owl:Ontology ;
+    rdfs:label "GHG排出量レポートオントロジー"@ja ;
+    rdfs:comment "GHGプロトコルに準拠した温室効果ガス排出量レポートのためのオントロジー"@ja ;
+    owl:versionInfo "1.0" .
+
+# クラス定義
+ghg:EmissionReport a owl:Class ;
+    rdfs:label "Emission Report"@en , "排出量レポート"@ja ;
+    rdfs:comment "組織全体の温室効果ガス排出量レポート"@ja .
+
+ghg:Emission a owl:Class ;
+    rdfs:label "Emission"@en , "排出量"@ja ;
+    rdfs:comment "温室効果ガス排出量の基底クラス"@ja .
+
+ghg:Scope1Emission a owl:Class ;
+    rdfs:subClassOf ghg:Emission ;
+    rdfs:label "Scope 1 Emission"@en , "スコープ1排出量"@ja ;
+    rdfs:comment "直接排出（燃料の直接燃焼など）"@ja .
+
+ghg:Scope2Emission a owl:Class ;
+    rdfs:subClassOf ghg:Emission ;
+    rdfs:label "Scope 2 Emission"@en , "スコープ2排出量"@ja ;
+    rdfs:comment "間接排出（購入電力など）"@ja .
+
+ghg:Organization a owl:Class ;
+    rdfs:label "Organization"@en , "組織"@ja ;
+    rdfs:comment "排出量を報告する組織"@ja .
+
+# プロパティ定義
+ghg:reportId a owl:DatatypeProperty ;
+    rdfs:label "report ID"@en , "レポートID"@ja ;
+    rdfs:domain ghg:EmissionReport ;
+    rdfs:range xsd:string .
+
+ghg:reportingPeriod a owl:DatatypeProperty ;
+    rdfs:label "reporting period"@en , "報告期間"@ja ;
+    rdfs:domain ghg:EmissionReport ;
+    rdfs:range xsd:string .
+
+ghg:reportingOrganization a owl:ObjectProperty ;
+    rdfs:label "reporting organization"@en , "報告組織"@ja ;
+    rdfs:domain ghg:EmissionReport ;
+    rdfs:range ghg:Organization .
+
+ghg:organizationName a owl:DatatypeProperty ;
+    rdfs:label "organization name"@en , "組織名"@ja ;
+    rdfs:domain ghg:Organization ;
+    rdfs:range xsd:string .
+
+ghg:hasEmission a owl:ObjectProperty ;
+    rdfs:label "has emission"@en , "排出量を持つ"@ja ;
+    rdfs:domain ghg:EmissionReport ;
+    rdfs:range ghg:Emission .
+
+ghg:emissionSource a owl:DatatypeProperty ;
+    rdfs:label "emission source"@en , "排出源"@ja ;
+    rdfs:domain ghg:Emission ;
+    rdfs:range xsd:string .
+
+ghg:sourceCategory a owl:DatatypeProperty ;
+    rdfs:label "source category"@en , "排出源カテゴリ"@ja ;
+    rdfs:domain ghg:Emission ;
+    rdfs:range xsd:string .
+
+ghg:co2Amount a owl:DatatypeProperty ;
+    rdfs:label "CO2 amount"@en , "CO2排出量"@ja ;
+    rdfs:domain ghg:Emission ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "CO2換算の排出量（単位：kg-CO2）"@ja .
+
+ghg:calculationMethod a owl:DatatypeProperty ;
+    rdfs:label "calculation method"@en , "計算方法"@ja ;
+    rdfs:domain ghg:Emission ;
+    rdfs:range xsd:string .
+
+ghg:emissionFactor a owl:DatatypeProperty ;
+    rdfs:label "emission factor"@en , "排出係数"@ja ;
+    rdfs:domain ghg:Emission ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "使用した排出係数（kg-CO2/unit）"@ja .
+
+ghg:totalScope1 a owl:DatatypeProperty ;
+    rdfs:label "total scope 1"@en , "スコープ1合計"@ja ;
+    rdfs:domain ghg:EmissionReport ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "スコープ1排出量の合計（kg-CO2）"@ja .
+
+ghg:totalScope2 a owl:DatatypeProperty ;
+    rdfs:label "total scope 2"@en , "スコープ2合計"@ja ;
+    rdfs:domain ghg:EmissionReport ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "スコープ2排出量の合計（kg-CO2）"@ja .
+
+ghg:totalEmissions a owl:DatatypeProperty ;
+    rdfs:label "total emissions"@en , "総排出量"@ja ;
+    rdfs:domain ghg:EmissionReport ;
+    rdfs:range xsd:decimal ;
+    rdfs:comment "全スコープの排出量合計（kg-CO2）"@ja .
+
+ghg:reportDate a owl:DatatypeProperty ;
+    rdfs:label "report date"@en , "レポート作成日"@ja ;
+    rdfs:domain ghg:EmissionReport ;
+    rdfs:range xsd:date .

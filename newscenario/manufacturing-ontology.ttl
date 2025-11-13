@@ -1,0 +1,93 @@
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix mfg: <http://example.org/manufacturing#> .
+
+# オントロジー定義
+mfg:ManufacturingOntology a owl:Ontology ;
+    rdfs:label "製造活動データオントロジー"@ja ;
+    rdfs:comment "製造工程におけるエネルギー消費とカーボンフットプリントを記録するためのオントロジー"@ja ;
+    owl:versionInfo "1.0" .
+
+# クラス定義
+mfg:ManufacturingActivity a owl:Class ;
+    rdfs:label "Manufacturing Activity"@en , "製造活動"@ja ;
+    rdfs:comment "製品を製造する活動単位"@ja .
+
+mfg:Product a owl:Class ;
+    rdfs:label "Product"@en , "製品"@ja ;
+    rdfs:comment "製造される製品"@ja .
+
+mfg:EnergyConsumption a owl:Class ;
+    rdfs:label "Energy Consumption"@en , "エネルギー消費"@ja ;
+    rdfs:comment "製造活動で消費されたエネルギー"@ja .
+
+mfg:EnergyType a owl:Class ;
+    rdfs:label "Energy Type"@en , "エネルギー種別"@ja ;
+    rdfs:comment "エネルギーの種類（電力、天然ガスなど）"@ja .
+
+# プロパティ定義
+mfg:activityId a owl:DatatypeProperty ;
+    rdfs:label "activity ID"@en , "活動ID"@ja ;
+    rdfs:domain mfg:ManufacturingActivity ;
+    rdfs:range xsd:string .
+
+mfg:activityName a owl:DatatypeProperty ;
+    rdfs:label "activity name"@en , "活動名"@ja ;
+    rdfs:domain mfg:ManufacturingActivity ;
+    rdfs:range xsd:string .
+
+mfg:produces a owl:ObjectProperty ;
+    rdfs:label "produces"@en , "生産する"@ja ;
+    rdfs:domain mfg:ManufacturingActivity ;
+    rdfs:range mfg:Product .
+
+mfg:productName a owl:DatatypeProperty ;
+    rdfs:label "product name"@en , "製品名"@ja ;
+    rdfs:domain mfg:Product ;
+    rdfs:range xsd:string .
+
+mfg:quantity a owl:DatatypeProperty ;
+    rdfs:label "quantity"@en , "生産量"@ja ;
+    rdfs:domain mfg:Product ;
+    rdfs:range xsd:decimal .
+
+mfg:unit a owl:DatatypeProperty ;
+    rdfs:label "unit"@en , "単位"@ja ;
+    rdfs:range xsd:string .
+
+mfg:hasEnergyConsumption a owl:ObjectProperty ;
+    rdfs:label "has energy consumption"@en , "エネルギー消費を持つ"@ja ;
+    rdfs:domain mfg:ManufacturingActivity ;
+    rdfs:range mfg:EnergyConsumption .
+
+mfg:energyType a owl:ObjectProperty ;
+    rdfs:label "energy type"@en , "エネルギー種別"@ja ;
+    rdfs:domain mfg:EnergyConsumption ;
+    rdfs:range mfg:EnergyType .
+
+mfg:energyTypeName a owl:DatatypeProperty ;
+    rdfs:label "energy type name"@en , "エネルギー種別名"@ja ;
+    rdfs:domain mfg:EnergyType ;
+    rdfs:range xsd:string .
+
+mfg:amount a owl:DatatypeProperty ;
+    rdfs:label "amount"@en , "消費量"@ja ;
+    rdfs:domain mfg:EnergyConsumption ;
+    rdfs:range xsd:decimal .
+
+mfg:startDate a owl:DatatypeProperty ;
+    rdfs:label "start date"@en , "開始日"@ja ;
+    rdfs:domain mfg:ManufacturingActivity ;
+    rdfs:range xsd:date .
+
+mfg:endDate a owl:DatatypeProperty ;
+    rdfs:label "end date"@en , "終了日"@ja ;
+    rdfs:domain mfg:ManufacturingActivity ;
+    rdfs:range xsd:date .
+
+mfg:facility a owl:DatatypeProperty ;
+    rdfs:label "facility"@en , "施設"@ja ;
+    rdfs:domain mfg:ManufacturingActivity ;
+    rdfs:range xsd:string .

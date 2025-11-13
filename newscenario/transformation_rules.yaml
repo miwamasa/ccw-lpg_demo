@@ -1,0 +1,265 @@
+# MDA Transformation Rules: Manufacturing Ontology to GHG Report Ontology
+# This declarative rule file defines the transformation from source to target model
+
+metadata:
+  name: "Manufacturing to GHG Emission Report Transformation"
+  version: "1.0"
+  source_ontology: "http://example.org/manufacturing#"
+  target_ontology: "http://example.org/ghg-report#"
+  description: "Transforms manufacturing activity data to GHG emission reports following GHG Protocol"
+
+# Constants and lookup tables
+constants:
+  # Emission factors: kg-CO2 per unit of energy
+  emission_factors:
+    electricity: 0.500       # kg-CO2/kWh
+    natural_gas: 2.03        # kg-CO2/m³
+    fuel_oil: 2.68          # kg-CO2/liter
+    diesel: 2.68            # kg-CO2/liter
+    gasoline: 2.31          # kg-CO2/liter
+    lpg: 1.51               # kg-CO2/kg
+    coal: 2.42              # kg-CO2/kg
+
+  # Scope classification
+  scope_classification:
+    scope1:  # Direct emissions
+      - natural_gas
+      - fuel_oil
+      - diesel
+      - gasoline
+      - lpg
+      - coal
+    scope2:  # Indirect emissions (purchased energy)
+      - electricity
+
+  # Default values
+  defaults:
+    unknown_organization: "Unknown Organization"
+    unknown_facility: "Unknown Facility"
+    unknown_activity: "Unknown Activity"
+    calculation_method: "Activity-based calculation using standard emission factors"
+    default_emission_factor: 0.0
+
+# Root-level transformation rules
+root_mapping:
+  target_type: "ghg:EmissionReport"
+  target_context:
+    ghg: "http://example.org/ghg-report#"
+    xsd: "http://www.w3.org/2001/XMLSchema#"
+
+# Field mappings: Direct field-to-field mappings
+field_mappings:
+  # Organization mapping
+  - source_path: "organization.name"
+    target_path: "reporting_organization.organization_name"
+    default: "${constants.defaults.unknown_organization}"
+
+  - source_path: "organization"
+    target_path: "reporting_organization.@type"
+    fixed_value: "ghg:Organization"
+
+# Calculation rules: Define how to calculate derived fields
+calculation_rules:
+  # Calculate CO2 emissions from energy consumption
+  - name: "calculate_co2_emission"
+    description: "Convert energy consumption to CO2 emissions"
+    input:
+      energy_amount: "$.amount"
+      energy_type: "$.energy_type.name"
+    formula: "energy_amount * emission_factor"
+    lookup:
+      emission_factor:
+        source: "constants.emission_factors"
+        key: "energy_type"
+        key_transform: "lowercase_underscore"
+        default: "${constants.defaults.default_emission_factor}"
+    output: "co2_amount"
+    rounding: 2
+
+  # Determine emission scope
+  - name: "determine_scope"
+    description: "Classify emission into Scope 1 or Scope 2"
+    input:
+      energy_type: "$.energy_type.name"
+    logic:
+      - condition:
+          key_transform: "lowercase_underscore"
+          check: "energy_type in constants.scope_classification.scope1"
+        output: 1
+      - condition:
+          key_transform: "lowercase_underscore"
+          check: "energy_type in constants.scope_classification.scope2"
+        output: 2
+      - default: 1  # Default to Scope 1
+    output: "scope"
+
+  # Generate emission source description
+  - name: "generate_emission_source"
+    description: "Create human-readable emission source description"
+    input:
+      facility: "$.facility"
+      activity_name: "$.activity_name"
+    formula: "'{facility} - {activity_name}'.format(facility=facility or '${constants.defaults.unknown_facility}', activity_name=activity_name or '${constants.defaults.unknown_activity}')"
+    output: "emission_source"
+
+  # Generate report ID
+  - name: "generate_report_id"
+    description: "Create unique report identifier"
+    input:
+      organization_name: "organization.name"
+      reporting_period: "reporting_period"
+    formula: "'GHG-{org}-{period}'.format(org=''.join(word[0].upper() for word in (organization_name or 'ORG').split()[:3]), period=reporting_period)"
+    output: "report_id"
+
+  # Determine reporting period from dates
+  - name: "determine_reporting_period"
+    description: "Extract reporting period from activity dates"
+    input:
+      activities: "manufacturing_activities"
+    logic:
+      - extract_dates: ["$.start_date", "$.end_date"]
+      - sort_dates: true
+      - take_earliest: true
+      - format: "YYYY-MM"  # Year-Month format
+    output: "reporting_period"
+    default: "current_month"
+
+# Transformation steps: Define the sequence of transformations
+transformation_steps:
+  # Step 1: Transform each manufacturing activity to emissions
+  - name: "transform_activities_to_emissions"
+    description: "Convert manufacturing activities to emission entries"
+    source: "manufacturing_activities"
+    target: "emissions"
+    iteration: true  # Process each activity
+    substeps:
+      # For each energy consumption in the activity
+      - name: "transform_energy_to_emission"
+        source: "$.energy_consumptions"
+        iteration: true  # Process each energy consumption
+        mapping:
+          # Basic emission type determination
+          - target: "@type"
+            calculation: "determine_scope"
+            format: "ghg:Scope{scope}Emission"
+
+          # Emission source description
+          - target: "emission_source"
+            calculation: "generate_emission_source"
+            context: "parent"  # Use parent (activity) context
+
+          # Source category
+          - target: "source_category"
+            source: "energy_type.name"
+            transform: "lowercase_underscore"
+
+          # CO2 amount calculation
+          - target: "co2_amount"
+            calculation: "calculate_co2_emission"
+
+          # Calculation method
+          - target: "calculation_method"
+            fixed_value: "${constants.defaults.calculation_method}"
+
+          # Emission factor used
+          - target: "emission_factor"
+            lookup:
+              source: "constants.emission_factors"
+              key: "energy_type.name"
+              key_transform: "lowercase_underscore"
+              default: "${constants.defaults.default_emission_factor}"
+
+          # Activity data preservation
+          - target: "activity_data"
+            mapping:
+              - target: "activity_id"
+                source: "activity_id"
+                context: "parent"
+              - target: "energy_amount"
+                source: "amount"
+              - target: "energy_unit"
+                source: "unit"
+              - target: "start_date"
+                source: "start_date"
+                context: "parent"
+              - target: "end_date"
+                source: "end_date"
+                context: "parent"
+
+  # Step 2: Calculate aggregated totals
+  - name: "calculate_aggregations"
+    description: "Calculate scope totals and overall emissions"
+    aggregations:
+      # Total Scope 1 emissions
+      - name: "total_scope1"
+        source: "emissions"
+        filter:
+          field: "@type"
+          equals: "ghg:Scope1Emission"
+        aggregate:
+          function: "sum"
+          field: "co2_amount"
+        rounding: 2
+        target: "total_scope1"
+
+      # Total Scope 2 emissions
+      - name: "total_scope2"
+        source: "emissions"
+        filter:
+          field: "@type"
+          equals: "ghg:Scope2Emission"
+        aggregate:
+          function: "sum"
+          field: "co2_amount"
+        rounding: 2
+        target: "total_scope2"
+
+      # Total emissions (all scopes)
+      - name: "total_emissions"
+        formula: "total_scope1 + total_scope2"
+        rounding: 2
+        target: "total_emissions"
+
+  # Step 3: Generate report metadata
+  - name: "generate_report_metadata"
+    description: "Create report-level metadata"
+    mappings:
+      - target: "reporting_period"
+        calculation: "determine_reporting_period"
+
+      - target: "report_id"
+        calculation: "generate_report_id"
+
+      - target: "report_date"
+        function: "current_date"
+        format: "YYYY-MM-DD"
+
+# Validation rules (optional)
+validation:
+  # Ensure required fields are present
+  required_fields:
+    source:
+      - "manufacturing_activities"
+    target:
+      - "report_id"
+      - "total_emissions"
+
+  # Data type validation
+  type_checks:
+    - field: "total_emissions"
+      type: "decimal"
+      min: 0
+    - field: "total_scope1"
+      type: "decimal"
+      min: 0
+    - field: "total_scope2"
+      type: "decimal"
+      min: 0
+
+# Transformation options
+options:
+  preserve_source_context: true
+  case_sensitive: false
+  null_handling: "use_defaults"
+  date_format: "ISO8601"
+  decimal_precision: 2

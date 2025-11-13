@@ -1,0 +1,178 @@
+{
+  "version": "1.0",
+  "description": "Manufacturing to GHG Emission Report Transformation",
+  "source_ontology": "http://example.org/manufacturing#",
+  "target_ontology": "http://example.org/ghg-report#",
+  "transformations": [
+    {
+      "id": "calculate_emissions",
+      "type": "derived_node",
+      "description": "エネルギー消費からCO2排出量を計算",
+      "enabled": true,
+      "output_entity": "Emission",
+      "source_entities": {
+        "consumption": "EnergyConsumption",
+        "energy_type": "EnergyType"
+      },
+      "join_condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "type": "field_match",
+            "from_expression": "consumption.energy_type_name",
+            "to_expression": "energy_type.name"
+          }
+        ]
+      },
+      "node_id_template": "EMISSION_{consumption.consumption_id}",
+      "properties": {
+        "consumption_id": {
+          "source": "consumption.consumption_id"
+        },
+        "energy_type_name": {
+          "source": "consumption.energy_type_name"
+        },
+        "energy_amount": {
+          "source": "consumption.amount"
+        },
+        "energy_unit": {
+          "source": "consumption.unit"
+        },
+        "emission_factor": {
+          "source": "energy_type.emission_factor"
+        },
+        "scope": {
+          "source": "energy_type.category"
+        },
+        "co2_amount_kg": {
+          "expression": "consumption.amount * energy_type.emission_factor",
+          "round": 2
+        },
+        "calculation_method": {
+          "value": "Activity-based calculation using standard emission factors"
+        }
+      },
+      "edges": [
+        {
+          "from": "new_node",
+          "to": "consumption",
+          "label": "CALCULATED_FROM"
+        },
+        {
+          "from": "new_node",
+          "to": "energy_type",
+          "label": "USES_EMISSION_FACTOR"
+        }
+      ]
+    },
+    {
+      "id": "link_consumption_to_emission",
+      "type": "cross_link",
+      "description": "エネルギー消費と排出量を関連付け",
+      "enabled": true,
+      "from_entity": "EnergyConsumption",
+      "to_entity": "Emission",
+      "link_label": "GENERATES_EMISSION",
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "type": "field_match",
+            "from_expression": "from.consumption_id",
+            "to_expression": "to.consumption_id"
+          }
+        ]
+      },
+      "properties": {
+        "relation_type": {"value": "consumption_to_emission"}
+      }
+    },
+    {
+      "id": "enrich_emissions_with_source",
+      "type": "enrich_properties",
+      "description": "排出量に排出源情報を追加",
+      "enabled": true,
+      "target_entity": "Emission",
+      "enrichments": [
+        {
+          "property": "emission_source",
+          "expression": "'Manufacturing Activity - ' + node.energy_type_name"
+        },
+        {
+          "property": "source_category",
+          "expression": "node.energy_type_name.lower().replace(' ', '_')"
+        }
+      ]
+    },
+    {
+      "id": "create_scope_aggregations",
+      "type": "aggregation",
+      "description": "Scope別の排出量集約",
+      "enabled": true,
+      "output_entity": "ScopeAggregation",
+      "group_by_entity": "ManufacturingActivity",
+      "aggregate_entity": "Emission",
+      "node_id_template": "SCOPE_AGG_{facility.activity_id}",
+      "aggregations": {
+        "total_scope1_kg": {
+          "function": "sum",
+          "field": "co2_amount_kg",
+          "filter": {
+            "field": "scope",
+            "equals": "Scope1"
+          },
+          "round": 2
+        },
+        "total_scope2_kg": {
+          "function": "sum",
+          "field": "co2_amount_kg",
+          "filter": {
+            "field": "scope",
+            "equals": "Scope2"
+          },
+          "round": 2
+        },
+        "total_emissions_kg": {
+          "function": "sum",
+          "field": "co2_amount_kg",
+          "round": 2
+        },
+        "num_emission_sources": {
+          "function": "count"
+        }
+      },
+      "properties": {
+        "activity_id": {
+          "source": "facility.activity_id"
+        },
+        "activity_name": {
+          "source": "facility.activity_name"
+        },
+        "facility": {
+          "source": "facility.facility"
+        },
+        "start_date": {
+          "source": "facility.start_date"
+        },
+        "end_date": {
+          "source": "facility.end_date"
+        },
+        "organization_name": {
+          "source": "facility.organization_name"
+        }
+      },
+      "edges": [
+        {
+          "from": "facility",
+          "to": "new_node",
+          "label": "HAS_SCOPE_AGGREGATION"
+        },
+        {
+          "from": "new_node",
+          "to": "aggregated_nodes",
+          "label": "AGGREGATES_EMISSION"
+        }
+      ]
+    }
+  ]
+}
