@@ -1,0 +1,129 @@
+{
+  "version": "1.0",
+  "description": "環境データのLPGスキーマ定義",
+  "entities": [
+    {
+      "name": "Facility",
+      "description": "施設マスタ",
+      "source": {
+        "type": "csv",
+        "path": "data/facilities.csv"
+      },
+      "id_field": "facility_id",
+      "properties": {
+        "facility_id": {
+          "type": "string",
+          "required": true
+        },
+        "facility_name": {
+          "type": "string",
+          "required": true,
+          "alias": "name"
+        },
+        "facility_type": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "capacity": {
+          "type": "integer"
+        }
+      }
+    },
+    {
+      "name": "EmissionRecord",
+      "description": "排出量記録",
+      "source": {
+        "type": "csv",
+        "path": "data/emissions.csv"
+      },
+      "id_template": "EMI_{facility_id}_{year}{month:02d}",
+      "properties": {
+        "facility_id": {
+          "type": "string",
+          "required": true
+        },
+        "year": {
+          "type": "integer",
+          "required": true
+        },
+        "month": {
+          "type": "integer",
+          "required": true
+        },
+        "co2_emissions_kg": {
+          "type": "float"
+        },
+        "waste_kg": {
+          "type": "float"
+        },
+        "water_usage_m3": {
+          "type": "float"
+        }
+      }
+    },
+    {
+      "name": "EnergyRecord",
+      "description": "エネルギー使用記録",
+      "source": {
+        "type": "csv",
+        "path": "data/energy.csv"
+      },
+      "id_template": "ENE_{facility_id}_{year}{month:02d}",
+      "properties": {
+        "facility_id": {
+          "type": "string",
+          "required": true
+        },
+        "year": {
+          "type": "integer",
+          "required": true
+        },
+        "month": {
+          "type": "integer",
+          "required": true
+        },
+        "electricity_kwh": {
+          "type": "float"
+        },
+        "gas_m3": {
+          "type": "float"
+        },
+        "renewable_ratio": {
+          "type": "float"
+        }
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "HAS_EMISSION",
+      "description": "施設が排出記録を持つ",
+      "from_entity": "Facility",
+      "to_entity": "EmissionRecord",
+      "join_condition": {
+        "from_field": "facility_id",
+        "to_field": "facility_id"
+      },
+      "properties": {
+        "year": {"source": "to.year"},
+        "month": {"source": "to.month"}
+      }
+    },
+    {
+      "name": "HAS_ENERGY",
+      "description": "施設がエネルギー記録を持つ",
+      "from_entity": "Facility",
+      "to_entity": "EnergyRecord",
+      "join_condition": {
+        "from_field": "facility_id",
+        "to_field": "facility_id"
+      },
+      "properties": {
+        "year": {"source": "to.year"},
+        "month": {"source": "to.month"}
+      }
+    }
+  ]
+}

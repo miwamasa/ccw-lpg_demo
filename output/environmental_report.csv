@@ -1,0 +1,6 @@
+﻿facility_id,facility_name,facility_type,avg_co2_intensity,max_co2_intensity,min_co2_intensity,avg_renewable_ratio,num_records,performance_rating,period
+F001,東京工場,製造,0.5269,0.5294,0.5244,0.165,2,Unknown,2024-Q1
+F002,大阪工場,製造,0.5092,0.5094,0.5091,0.11,2,Unknown,2024-Q1
+F003,名古屋倉庫,倉庫,0.4171,0.4174,0.4167,0.265,2,Unknown,2024-Q1
+F004,福岡オフィス,オフィス,0.3897,0.4,0.3793,0.325,2,Unknown,2024-Q1
+F005,札幌データセンター,データセンター,0.3225,0.325,0.32,0.41,2,Unknown,2024-Q1
