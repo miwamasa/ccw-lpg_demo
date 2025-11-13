@@ -1,0 +1,12 @@
+consumption_id,activity_id,energy_type_name,amount,unit
+EC001,ACT001,Electricity,15000,kWh
+EC002,ACT001,Natural Gas,800,m3
+EC003,ACT002,Electricity,8000,kWh
+EC004,ACT002,LPG,200,kg
+EC005,ACT003,Electricity,5000,kWh
+EC006,ACT003,Diesel,150,liter
+EC007,ACT004,Electricity,3000,kWh
+EC008,ACT004,Natural Gas,400,m3
+EC009,ACT005,Electricity,12000,kWh
+EC010,ACT005,Diesel,250,liter
+EC011,ACT005,Natural Gas,600,m3

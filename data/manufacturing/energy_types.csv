@@ -1,0 +1,8 @@
+energy_type_id,name,category,emission_factor,emission_factor_unit
+ET001,Electricity,Scope2,0.500,kg-CO2/kWh
+ET002,Natural Gas,Scope1,2.03,kg-CO2/m3
+ET003,LPG,Scope1,1.51,kg-CO2/kg
+ET004,Diesel,Scope1,2.68,kg-CO2/liter
+ET005,Fuel Oil,Scope1,2.68,kg-CO2/liter
+ET006,Gasoline,Scope1,2.31,kg-CO2/liter
+ET007,Coal,Scope1,2.42,kg-CO2/kg

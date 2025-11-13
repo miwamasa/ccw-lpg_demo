@@ -1,0 +1,127 @@
+{
+  "version": "1.0",
+  "description": "Manufacturing Ontology LPGスキーマ定義",
+  "ontology": "http://example.org/manufacturing#",
+  "entities": [
+    {
+      "name": "ManufacturingActivity",
+      "description": "製造活動",
+      "source": {
+        "type": "csv",
+        "path": "data/manufacturing/activities.csv"
+      },
+      "id_field": "activity_id",
+      "properties": {
+        "activity_id": {
+          "type": "string",
+          "required": true
+        },
+        "activity_name": {
+          "type": "string",
+          "required": true
+        },
+        "facility": {
+          "type": "string"
+        },
+        "start_date": {
+          "type": "string"
+        },
+        "end_date": {
+          "type": "string"
+        },
+        "product_name": {
+          "type": "string"
+        },
+        "product_quantity": {
+          "type": "float"
+        },
+        "product_unit": {
+          "type": "string"
+        },
+        "organization_name": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "name": "EnergyConsumption",
+      "description": "エネルギー消費",
+      "source": {
+        "type": "csv",
+        "path": "data/manufacturing/energy_consumptions.csv"
+      },
+      "id_field": "consumption_id",
+      "properties": {
+        "consumption_id": {
+          "type": "string",
+          "required": true
+        },
+        "activity_id": {
+          "type": "string",
+          "required": true
+        },
+        "energy_type_name": {
+          "type": "string",
+          "required": true
+        },
+        "amount": {
+          "type": "float",
+          "required": true
+        },
+        "unit": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "name": "EnergyType",
+      "description": "エネルギー種別",
+      "source": {
+        "type": "csv",
+        "path": "data/manufacturing/energy_types.csv"
+      },
+      "id_field": "energy_type_id",
+      "properties": {
+        "energy_type_id": {
+          "type": "string",
+          "required": true
+        },
+        "name": {
+          "type": "string",
+          "required": true
+        },
+        "category": {
+          "type": "string"
+        },
+        "emission_factor": {
+          "type": "float"
+        },
+        "emission_factor_unit": {
+          "type": "string"
+        }
+      }
+    }
+  ],
+  "relationships": [
+    {
+      "name": "HAS_ENERGY_CONSUMPTION",
+      "description": "製造活動がエネルギー消費を持つ",
+      "from_entity": "ManufacturingActivity",
+      "to_entity": "EnergyConsumption",
+      "join_condition": {
+        "from_field": "activity_id",
+        "to_field": "activity_id"
+      }
+    },
+    {
+      "name": "HAS_ENERGY_TYPE",
+      "description": "エネルギー消費がエネルギー種別を参照",
+      "from_entity": "EnergyConsumption",
+      "to_entity": "EnergyType",
+      "join_condition": {
+        "from_field": "energy_type_name",
+        "to_field": "name"
+      }
+    }
+  ]
+}

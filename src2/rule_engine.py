@@ -80,8 +80,11 @@ class RuleEngine:
         link_label = trans["link_label"]
         condition = trans["condition"]
 
-        from_nodes = self.builder.get_nodes_by_entity(from_entity)
-        to_nodes = self.builder.get_nodes_by_entity(to_entity)
+        # グラフから直接ノードを検索（動的に作成されたノードも含む）
+        from_nodes = [n for n, d in self.graph.nodes(data=True)
+                     if d.get('label') == from_entity]
+        to_nodes = [n for n, d in self.graph.nodes(data=True)
+                   if d.get('label') == to_entity]
 
         links_added = 0
         for from_node in from_nodes:
@@ -445,8 +448,9 @@ class RuleEngine:
         properties_def = trans.get("properties", {})
         edges_def = trans.get("edges", [])
 
-        # グループ化エンティティのノードを取得
-        group_nodes = self.builder.get_nodes_by_entity(group_by_entity)
+        # グループ化エンティティのノードを取得（グラフから直接検索）
+        group_nodes = [n for n, d in self.graph.nodes(data=True)
+                      if d.get('label') == group_by_entity]
 
         nodes_created = 0
         for group_node in group_nodes:
@@ -454,9 +458,18 @@ class RuleEngine:
 
             # このグループに属する集約対象ノードを取得
             aggregate_nodes = []
+
+            # 直接の後継をチェック
             for successor in self.graph.successors(group_node):
                 if self.graph.nodes[successor].get("label") == aggregate_entity:
                     aggregate_nodes.append(successor)
+
+            # 直接後継が見つからない場合、2ホップまで探索
+            if not aggregate_nodes:
+                for first_hop in self.graph.successors(group_node):
+                    for second_hop in self.graph.successors(first_hop):
+                        if self.graph.nodes[second_hop].get("label") == aggregate_entity:
+                            aggregate_nodes.append(second_hop)
 
             if not aggregate_nodes:
                 continue
@@ -467,10 +480,21 @@ class RuleEngine:
                 function = agg_def["function"]
                 field = agg_def.get("field", "")
 
+                # フィルター条件を適用
+                filtered_nodes = aggregate_nodes
+                if "filter" in agg_def:
+                    filter_def = agg_def["filter"]
+                    filter_field = filter_def.get("field")
+                    filter_equals = filter_def.get("equals")
+                    filtered_nodes = [
+                        n for n in aggregate_nodes
+                        if self.graph.nodes[n].get(filter_field) == filter_equals
+                    ]
+
                 if function == "count":
-                    value = len(aggregate_nodes)
+                    value = len(filtered_nodes)
                 else:
-                    values = [self.graph.nodes[n][field] for n in aggregate_nodes if field in self.graph.nodes[n]]
+                    values = [self.graph.nodes[n][field] for n in filtered_nodes if field in self.graph.nodes[n]]
                     if values:
                         if function == "avg":
                             value = sum(values) / len(values)
