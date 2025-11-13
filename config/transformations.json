@@ -1,0 +1,216 @@
+{
+  "version": "1.0",
+  "description": "環境データの知識変換ルール",
+  "transformations": [
+    {
+      "id": "link_emission_and_energy",
+      "type": "cross_link",
+      "description": "排出記録とエネルギー記録の相関リンク",
+      "enabled": true,
+      "from_entity": "EmissionRecord",
+      "to_entity": "EnergyRecord",
+      "link_label": "CORRELATES_WITH",
+      "condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "type": "field_match",
+            "from_expression": "from.facility_id",
+            "to_expression": "to.facility_id"
+          },
+          {
+            "type": "field_match",
+            "from_expression": "from.year",
+            "to_expression": "to.year"
+          },
+          {
+            "type": "field_match",
+            "from_expression": "from.month",
+            "to_expression": "to.month"
+          }
+        ]
+      },
+      "properties": {
+        "relation_type": {"value": "temporal_match"},
+        "created_by": {"value": "transformer"}
+      }
+    },
+    {
+      "id": "calculate_intensity",
+      "type": "derived_node",
+      "description": "CO2排出原単位の計算",
+      "enabled": true,
+      "output_entity": "IntensityMetrics",
+      "source_entities": {
+        "emission": "EmissionRecord",
+        "energy": "EnergyRecord"
+      },
+      "join_condition": {
+        "operator": "AND",
+        "conditions": [
+          {
+            "type": "field_match",
+            "from_expression": "emission.facility_id",
+            "to_expression": "energy.facility_id"
+          },
+          {
+            "type": "field_match",
+            "from_expression": "emission.year",
+            "to_expression": "energy.year"
+          },
+          {
+            "type": "field_match",
+            "from_expression": "emission.month",
+            "to_expression": "energy.month"
+          }
+        ]
+      },
+      "node_id_template": "INT_{emission.facility_id}_{emission.year}{emission.month:02d}",
+      "properties": {
+        "year": {
+          "source": "emission.year"
+        },
+        "month": {
+          "source": "emission.month"
+        },
+        "co2_intensity_kg_per_kwh": {
+          "expression": "emission.co2_emissions_kg / energy.electricity_kwh if energy.electricity_kwh > 0 else 0",
+          "round": 4
+        },
+        "water_intensity_m3_per_kwh": {
+          "expression": "emission.water_usage_m3 / energy.electricity_kwh if energy.electricity_kwh > 0 else 0",
+          "round": 6
+        },
+        "renewable_ratio": {
+          "source": "energy.renewable_ratio"
+        },
+        "derived_from": {
+          "value": "emission_and_energy"
+        }
+      },
+      "edges": [
+        {
+          "from": "facility",
+          "to": "new_node",
+          "label": "HAS_INTENSITY",
+          "properties": {
+            "computed": {"value": true}
+          }
+        },
+        {
+          "from": "new_node",
+          "to": "emission",
+          "label": "DERIVED_FROM_EMISSION"
+        },
+        {
+          "from": "new_node",
+          "to": "energy",
+          "label": "DERIVED_FROM_ENERGY"
+        }
+      ]
+    },
+    {
+      "id": "classify_performance",
+      "type": "enrich_properties",
+      "description": "パフォーマンス評価の付与",
+      "enabled": true,
+      "target_entity": "IntensityMetrics",
+      "enrichments": [
+        {
+          "property": "avg_benchmark",
+          "expression": "avg(IntensityMetrics.co2_intensity_kg_per_kwh)",
+          "round": 4
+        },
+        {
+          "property": "performance_rating",
+          "rules": [
+            {
+              "condition": "node.co2_intensity_kg_per_kwh < avg_benchmark * 0.8 and node.renewable_ratio > 0.25",
+              "value": "Excellent"
+            },
+            {
+              "condition": "node.co2_intensity_kg_per_kwh < avg_benchmark and node.renewable_ratio > 0.15",
+              "value": "Good"
+            },
+            {
+              "condition": "node.co2_intensity_kg_per_kwh < avg_benchmark * 1.2",
+              "value": "Average"
+            },
+            {
+              "condition": "true",
+              "value": "NeedsImprovement"
+            }
+          ]
+        },
+        {
+          "property": "rating_timestamp",
+          "expression": "now()"
+        }
+      ]
+    },
+    {
+      "id": "create_facility_summary",
+      "type": "aggregation",
+      "description": "施設別集約レポート",
+      "enabled": true,
+      "output_entity": "AggregationReport",
+      "group_by_entity": "Facility",
+      "aggregate_entity": "IntensityMetrics",
+      "node_id_template": "AGG_{facility.facility_id}_2024",
+      "aggregations": {
+        "avg_co2_intensity": {
+          "function": "avg",
+          "field": "co2_intensity_kg_per_kwh",
+          "round": 4
+        },
+        "max_co2_intensity": {
+          "function": "max",
+          "field": "co2_intensity_kg_per_kwh",
+          "round": 4
+        },
+        "min_co2_intensity": {
+          "function": "min",
+          "field": "co2_intensity_kg_per_kwh",
+          "round": 4
+        },
+        "avg_renewable_ratio": {
+          "function": "avg",
+          "field": "renewable_ratio",
+          "round": 3
+        },
+        "num_records": {
+          "function": "count"
+        }
+      },
+      "properties": {
+        "facility_id": {
+          "source": "facility.facility_id"
+        },
+        "facility_name": {
+          "source": "facility.name"
+        },
+        "facility_type": {
+          "source": "facility.facility_type"
+        },
+        "period": {
+          "value": "2024-Q1"
+        },
+        "aggregation_type": {
+          "value": "facility_summary"
+        }
+      },
+      "edges": [
+        {
+          "from": "facility",
+          "to": "new_node",
+          "label": "HAS_AGGREGATION"
+        },
+        {
+          "from": "new_node",
+          "to": "aggregated_nodes",
+          "label": "AGGREGATES"
+        }
+      ]
+    }
+  ]
+}
